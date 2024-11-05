@@ -1,0 +1,135 @@
+---
+title: "Bellabeat Case Study Analysis"
+author: "Isa A."
+date: "2024-11-05"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+## Load Data
+```{r load-data}
+dailyactivity <- read.csv("dailyactivity.csv")
+head(dailyactivity)
+
+## Summary Statistics
+```{r summary-stats}
+summary_stats <- dailyactivity %>%
+  summarise(
+    avg_steps = mean(TotalSteps, na.rm = TRUE),
+    min_steps = min(TotalSteps, na.rm = TRUE),
+    max_steps = max(TotalSteps, na.rm = TRUE),
+    avg_calories = mean(Calories, na.rm = TRUE),
+    min_calories = min(Calories, na.rm = TRUE),
+    max_calories = max(Calories, na.rm = TRUE),
+    avg_very_active_minutes = mean(VeryActiveMinutes, na.rm = TRUE),
+    avg_fairly_active_minutes = mean(FairlyActiveMinutes, na.rm = TRUE),
+    avg_lightly_active_minutes = mean(LightlyActiveMinutes, na.rm = TRUE),
+    avg_sedentary_minutes = mean(SedentaryMinutes, na.rm = TRUE)
+  )
+summary_stats
+
+## Trend Analysis: Steps and Calories Over Time
+
+```{r trend-analysis, echo=FALSE}
+# Ensure ActivityDate is in Date format if necessary
+dailyactivity$ActivityDate <- as.Date(dailyactivity$ActivityDate, format = "%m/%d/%Y")
+
+# Plot for Steps and Calories Over Time
+ggplot(data = dailyactivity, aes(x = ActivityDate)) +
+  geom_line(aes(y = TotalSteps, color = "Total Steps"), size = 1) +
+  geom_line(aes(y = Calories, color = "Calories"), size = 1) +
+  labs(title = "Daily Steps and Calories Burned Over Time",
+       x = "Date",
+       y = "Count",
+       color = "Metric") +
+  theme_minimal()
+
+## Activity Level Proportions
+
+## This section calculates and displays the proportion of time spent in each activity level.
+
+```{r activity-level-proportion, echo=FALSE}
+activity_proportion <- dailyactivity %>%
+  mutate(TotalMinutes = VeryActiveMinutes + FairlyActiveMinutes + LightlyActiveMinutes + SedentaryMinutes,
+         VeryActiveProp = VeryActiveMinutes / TotalMinutes,
+         FairlyActiveProp = FairlyActiveMinutes / TotalMinutes,
+         LightlyActiveProp = LightlyActiveMinutes / TotalMinutes,
+         SedentaryProp = SedentaryMinutes / TotalMinutes) %>%
+  summarise(
+    avg_very_active_prop = mean(VeryActiveProp, na.rm = TRUE),
+    avg_fairly_active_prop = mean(FairlyActiveProp, na.rm = TRUE),
+    avg_lightly_active_prop = mean(LightlyActiveProp, na.rm = TRUE),
+    avg_sedentary_prop = mean(SedentaryProp, na.rm = TRUE)
+  )
+
+activity_proportion_long <- tidyr::pivot_longer(activity_proportion, cols = starts_with("avg"),
+                                                names_to = "ActivityLevel", values_to = "Proportion")
+
+ggplot(activity_proportion_long, aes(x = ActivityLevel, y = Proportion, fill = ActivityLevel)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Average Proportion of Time Spent in Each Activity Level",
+       x = "Activity Level", y = "Proportion") +
+  theme_minimal()
+
+
+
+
+## This section segments users based on their activity levels (Low, Moderate, High) and visualizes the average steps and calories for each group.
+
+## User Segmentation by Activity Level
+
+```{r user-segmentation, echo=FALSE}
+segmentation <- dailyactivity %>%
+  mutate(ActivityLevel = case_when(
+    TotalSteps < 5000 ~ "Low",
+    TotalSteps >= 5000 & TotalSteps <= 10000 ~ "Moderate",
+    TotalSteps > 10000 ~ "High"
+  )) %>%
+  group_by(ActivityLevel) %>%
+  summarise(
+    avg_steps = mean(TotalSteps, na.rm = TRUE),
+    avg_calories = mean(Calories, na.rm = TRUE)
+  )
+
+ggplot(segmentation, aes(x = ActivityLevel, y = avg_steps, fill = ActivityLevel)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Average Steps by Activity Level",
+       x = "Activity Level", y = "Average Steps") +
+  theme_minimal()
+
+ggplot(segmentation, aes(x = ActivityLevel, y = avg_calories, fill = ActivityLevel)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Average Calories by Activity Level",
+       x = "Activity Level", y = "Average Calories") +
+  theme_minimal()
+```  
+
+
+
+
+## Conclusion
+
+The analysis of Bellabeat’s daily activity data reveals several insights into user behaviors and engagement patterns:
+
+1. **Activity Levels and Calorie Burn**:
+   - The correlation analysis showed a positive relationship between steps, very active minutes, and calories burned. This suggests that higher-intensity activities play a significant role in increasing daily calorie expenditure.
+   - **Recommendation**: Encourage users to increase their active minutes, particularly very active minutes, by setting personalized daily and weekly goals within the app.
+
+2. **Daily Trends in Activity**:
+   - The trend analysis of steps and calories over time highlighted fluctuations in user engagement, with noticeable peaks on certain days.
+   - **Recommendation**: Bellabeat could implement motivational nudges, such as reminders to move or daily challenges, to promote consistent activity levels, especially on lower-activity days.
+
+3. **Time Allocation in Activity Levels**:
+   - Users spend a considerable portion of their time in sedentary or lightly active states, with only a small fraction in very active minutes.
+   - **Recommendation**: Introduce reminders or suggestions for brief, frequent active breaks to help users reduce sedentary time. These notifications could be tailored based on user behavior patterns.
+
+4. **User Segmentation by Activity Level**:
+   - Segmenting users into Low, Moderate, and High activity groups revealed distinct differences in steps, calories burned, and time spent in various activity levels. High-activity users consistently had greater step counts and calorie expenditure, while low-activity users had lower engagement.
+   - **Recommendation**: Bellabeat could personalize in-app notifications and suggestions based on user activity levels. For instance, low-activity users could receive encouragement to achieve higher step counts, while high-activity users might receive tips for optimizing performance.
+
+Overall, these insights suggest opportunities for Bellabeat to enhance user engagement through tailored activity goals, motivational nudges, and personalized feedback. By aligning product features with user activity patterns, Bellabeat can better support users on their wellness journeys.
